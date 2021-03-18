@@ -1,1 +1,2 @@
-# computer_graphics_lab4
+# Computer Graphic. Lab3s
+

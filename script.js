@@ -9,6 +9,8 @@ const sceneState = {
     lightDiffuse: NaN,
     lightSpecular: NaN,
     lightShininess: NaN,
+    shading: NaN,
+    lightModel: NaN,
 }
 
 
@@ -22,6 +24,9 @@ function updateState() {
 
     sceneState.lightDirection = [x, y, z];
     sceneState.lightShininess = parseFloat(document.querySelector('#shininess').value);
+
+    sceneState.shading = parseInt(document.querySelector('.shading').value)
+    sceneState.lightModel = parseInt(document.querySelector('.lightModel').value)
 }
 
 
@@ -242,6 +247,8 @@ class Scene {
                 dampingFunction: this.gl.getUniformLocation(shaderProgram, 'uDampingFunction'),
 
                 viewPosition: this.gl.getUniformLocation(shaderProgram, 'uViewPosition'),
+                lightModel: this.gl.getUniformLocation(shaderProgram, 'uLightModel'),
+                shading: this.gl.getUniformLocation(shaderProgram, 'uShading'),
             }
         };
 
@@ -313,6 +320,8 @@ class Scene {
             this.gl.uniform1i(this.programInfo.uniformLocations.dampingFunction, this.state.dampingFunction);
             this.gl.uniform3fv(this.programInfo.uniformLocations.viewPosition, [0, 0, 10]);
 
+            this.gl.uniform1i(this.programInfo.uniformLocations.lightModel, this.state.lightModel);
+            this.gl.uniform1i(this.programInfo.uniformLocations.shading, this.state.shading);
 
             this.gl.drawElements(this.gl.TRIANGLES, buffers.raw_indices.length, this.gl.UNSIGNED_SHORT, 0);
         });
@@ -362,6 +371,8 @@ function main() {
     }
 
     const vsSource = `
+    precision mediump float;
+    
     attribute vec4 aVertexPosition;
     attribute vec4 aVertexColor;
     attribute vec3 aNormal;
@@ -369,20 +380,52 @@ function main() {
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
     
+    
+    uniform float uLightPower;
+    uniform vec3 uLightDirection;
+    
+    uniform lowp int uDampingFunction;
+    uniform lowp int uShading;
+    uniform lowp int uLightModel;
+    
     varying vec4 vPosition;
     varying vec4 vColor;
     varying vec3 vNormal;
 
+    float sqr(float coef) {
+        return coef * coef;
+    }
+    
+    float linear(float coef) {
+        return coef;
+    }
 
     float lambert(vec3 normal, vec3 lightPosition, float power) {
         return max(dot(normal, normalize(lightPosition)), 0.0) * power;    
     }
 
     void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-      vColor = aVertexColor;
-      vPosition = aVertexPosition;
-      vNormal = normalize(mat3(uModelViewMatrix) * aNormal);
+        vNormal = normalize(mat3(uModelViewMatrix) * aNormal);
+    
+        float light = 1.0;
+        if (uShading == 1) {
+            if (uLightModel == 0) {
+                light = lambert(vNormal, uLightDirection - vec3(aVertexPosition), uLightPower);   
+            }
+            else if (uLightModel == 1) {}
+        }
+        
+        if (uDampingFunction == 0) {
+            light = linear(light);   
+        }
+        else {
+            light *= sqr(light);    
+        }
+        
+        gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+        vColor = aVertexColor;
+        vColor.rgb *= light;
+        vPosition = aVertexPosition;
     }
     `;
 
@@ -396,7 +439,10 @@ function main() {
     uniform float uLightSpecular;
     uniform float uLightShininess;
     uniform vec3 uViewPosition;
-    uniform int uDampingFunction;
+    uniform lowp int uDampingFunction;
+    
+    uniform lowp int uLightModel; 
+    uniform lowp int uShading;
     
     varying vec4 vPosition;
     varying vec4 vColor;
@@ -415,10 +461,13 @@ function main() {
     }
     
     void main(void) {
-        // vec3 uLightDirection = normalize(vec3(10.0, 5.0, 7.0));
-        
-        if 
-        float light = lambert(vNormal, uLightDirection - vec3(vPosition), uLightPower);   
+        float light = 1.0;
+        if (uShading == 0) {
+            if (uLightModel == 0) {
+                light = lambert(vNormal, uLightDirection - vec3(vPosition), uLightPower);   
+            }
+            else if (uLightModel == 1) {}
+        }
         
         gl_FragColor = vColor;
         if (uDampingFunction == 0) {

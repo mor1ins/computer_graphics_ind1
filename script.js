@@ -8,6 +8,7 @@ const sceneState = {
     lightAmbient: NaN,
     lightDiffuse: NaN,
     lightSpecular: NaN,
+    lightShininess: NaN,
 }
 
 
@@ -20,18 +21,19 @@ function updateState() {
     const z = parseInt(document.querySelector('#z_coord').value);
 
     sceneState.lightDirection = [x, y, z];
+    sceneState.lightShininess = parseFloat(document.querySelector('#shininess').value);
 }
 
 
-window.addEventListener('keydown', function (event)
-{
-    if (event.key === '1') {
-        sceneState.dampingFunction = 0;
-    }
-    else if (event.key === '2') {
-        sceneState.dampingFunction = 1;
-    }
-});
+// window.addEventListener('keydown', function (event)
+// {
+//     if (event.key === '1') {
+//         sceneState.dampingFunction = 0;
+//     }
+//     else if (event.key === '2') {
+//         sceneState.dampingFunction = 1;
+//     }
+// });
 
 
 class Cube {
@@ -230,12 +232,16 @@ class Scene {
             uniformLocations: {
                 projectionMatrix: this.gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
                 modelViewMatrix: this.gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+
                 lightPower: this.gl.getUniformLocation(shaderProgram, 'uLightPower'),
                 lightDirection: this.gl.getUniformLocation(shaderProgram, 'uLightDirection'),
                 lightAmbient: this.gl.getUniformLocation(shaderProgram, 'uLightAmbient'),
                 lightDiffuse: this.gl.getUniformLocation(shaderProgram, 'uLightDiffuse'),
                 lightSpecular: this.gl.getUniformLocation(shaderProgram, 'uLightSpecular'),
+                lightShininess: this.gl.getUniformLocation(shaderProgram, 'uLightShininess'),
                 dampingFunction: this.gl.getUniformLocation(shaderProgram, 'uDampingFunction'),
+
+                viewPosition: this.gl.getUniformLocation(shaderProgram, 'uViewPosition'),
             }
         };
 
@@ -303,11 +309,14 @@ class Scene {
             this.gl.uniformMatrix4fv(this.programInfo.uniformLocations.modelViewMatrix, false, modelViewMatrix);
             this.gl.uniform1f(this.programInfo.uniformLocations.lightPower, this.state.lightPower);
             this.gl.uniform3fv(this.programInfo.uniformLocations.lightDirection, this.state.lightDirection);
+            this.gl.uniform1f(this.programInfo.uniformLocations.lightShininess, this.state.lightShininess);
             this.gl.uniform1i(this.programInfo.uniformLocations.dampingFunction, this.state.dampingFunction);
+            this.gl.uniform3fv(this.programInfo.uniformLocations.viewPosition, [0, 0, 10]);
+
 
             this.gl.drawElements(this.gl.TRIANGLES, buffers.raw_indices.length, this.gl.UNSIGNED_SHORT, 0);
         });
-        this.cubeRotation += deltaTime / 2;
+        this.cubeRotation += deltaTime / 5;
     }
 
     initShaderProgram() {
@@ -360,12 +369,19 @@ function main() {
     uniform mat4 uModelViewMatrix;
     uniform mat4 uProjectionMatrix;
     
+    varying vec4 vPosition;
     varying vec4 vColor;
     varying vec3 vNormal;
+
+
+    float lambert(vec3 normal, vec3 lightPosition, float power) {
+        return max(dot(normal, normalize(lightPosition)), 0.0) * power;    
+    }
 
     void main(void) {
       gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
       vColor = aVertexColor;
+      vPosition = aVertexPosition;
       vNormal = normalize(mat3(uModelViewMatrix) * aNormal);
     }
     `;
@@ -375,13 +391,14 @@ function main() {
     
     uniform float uLightPower;
     uniform vec3 uLightDirection;
-    uniform vec3 uLightAmbient;
-    uniform vec3 uLightDiffuse;
-    uniform vec3 uLightSpecular;
-    
+    uniform float uLightAmbient;
+    uniform float uLightDiffuse;
+    uniform float uLightSpecular;
+    uniform float uLightShininess;
+    uniform vec3 uViewPosition;
     uniform int uDampingFunction;
     
-    
+    varying vec4 vPosition;
     varying vec4 vColor;
     varying vec3 vNormal;
        
@@ -393,20 +410,23 @@ function main() {
         return coef;
     }
    
+    float lambert(vec3 normal, vec3 lightPosition, float power) {
+        return max(dot(normal, normalize(lightPosition)), 0.0) * power;    
+    }
     
     void main(void) {
         // vec3 uLightDirection = normalize(vec3(10.0, 5.0, 7.0));
-        float amount = max(dot(vNormal, normalize(uLightDirection)), 0.0);        
+        
+        if 
+        float light = lambert(vNormal, uLightDirection - vec3(vPosition), uLightPower);   
         
         gl_FragColor = vColor;
         if (uDampingFunction == 0) {
-            gl_FragColor.rgb *= linear(amount);   
+            gl_FragColor.rgb *= linear(light);   
         }
         else {
-            gl_FragColor.rgb *= sqr(amount);    
+            gl_FragColor.rgb *= sqr(light);    
         }
-            
-        gl_FragColor.rgb *= uLightPower;
     }
     `;
 

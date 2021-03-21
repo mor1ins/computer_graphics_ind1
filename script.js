@@ -414,6 +414,22 @@ function main() {
             return diffuseLightDot + specularLightParam * power;
         }
         
+        float celShaded(vec3 normal, vec3 lightPosition, float power) {
+            float light = lambert(normal, lightPosition, power);
+
+            if (light > 0.95) {
+                light = 1.0;
+            } else if (light > 0.5) {
+                light = 0.7;
+            } else if (light > 0.2) {
+                light = 0.2;
+            } else {
+                light = 0.05;
+            }
+
+            return light;
+        }
+        
         float evaluateLighting(int shading, int current, int lightModel, vec3 normal, 
                                vec3 lightDir, vec3 viewPosition, float power, float shininess) 
         {
@@ -424,6 +440,9 @@ function main() {
                 }
                 else if (lightModel == 1) {
                     light = phong(normal, lightDir, viewPosition, power, shininess);
+                }
+                else if (lightModel == 2) {
+                    light = celShaded(normal, lightDir, power);   
                 }
             }
             return light;
@@ -456,7 +475,6 @@ function main() {
     
     void main(void) {
         vec3 normal = normalize(mat3(uModelViewMatrix) * aNormal);
-        
         vec3 positionEye3 = vec3(uModelViewMatrix * vPosition);
         vec3 lightDirection = normalize(uLightDirection - positionEye3);
         

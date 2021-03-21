@@ -444,6 +444,9 @@ function main() {
     uniform lowp int uLightModel; 
     uniform lowp int uShading;
     
+    uniform mat4 uModelViewMatrix;
+    uniform mat4 uProjectionMatrix;
+    
     varying vec4 vPosition;
     varying vec4 vColor;
     varying vec3 vNormal;
@@ -466,7 +469,24 @@ function main() {
             if (uLightModel == 0) {
                 light = lambert(vNormal, uLightDirection - vec3(vPosition), uLightPower);   
             }
-            else if (uLightModel == 1) {}
+            else if (uLightModel == 1) {
+                vec3 uAmbientLightColor = vec3(0.1, 0.1, 0.1);
+                vec3 uDiffuseLightColor = vec3(vColor);
+                vec3 uSpecularLightColor = vec3(1.0, 1.0, 1.0);
+                
+                vec4 vertexPositionEye4 = uModelViewMatrix * vec4(vPosition);
+                vec3 vertexPositionEye3 = vertexPositionEye4.xyz / vertexPositionEye4.w;
+
+                vec3 lightDirection = normalize(uLightDirection - vertexPositionEye3);
+                float diffuseLightDot = max(dot(vNormal, lightDirection), 0.0);
+                vec3 reflectionVector = normalize(reflect(-lightDirection, vNormal));
+                vec3 viewVectorEye = -normalize(vertexPositionEye3);
+                float specularLightDot = max(dot(reflectionVector, viewVectorEye), 0.0);
+                float specularLightParam = pow(specularLightDot, 10.0*uLightPower);
+
+                // vec3 vLightWeighting = uAmbientLightColor + uDiffuseLightColor * diffuseLightDot + uSpecularLightColor * specularLightParam;
+                light = diffuseLightDot + specularLightParam;
+            }
         }
         
         gl_FragColor = vColor;

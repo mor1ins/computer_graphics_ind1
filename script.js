@@ -434,9 +434,9 @@ function main() {
     
     uniform float uLightPower;
     uniform vec3 uLightDirection;
-    uniform float uLightAmbient;
-    uniform float uLightDiffuse;
-    uniform float uLightSpecular;
+    uniform vec3 uAmbientLightColor;
+    uniform vec3 uDiffuseLightColor;
+    uniform vec3 uSpecularLightColor;
     uniform float uLightShininess;
     uniform vec3 uViewPosition;
     uniform lowp int uDampingFunction;
@@ -459,33 +459,33 @@ function main() {
         return coef;
     }
    
+    float positive_dot(vec3 left, vec3 right) {
+        return max(dot(left, right), 0.0);
+    }
+   
     float lambert(vec3 normal, vec3 lightPosition, float power) {
-        return max(dot(normal, normalize(lightPosition)), 0.0) * power;    
+        return positive_dot(normal, normalize(lightPosition)) * power;    
+    }
+    
+    float phong(vec3 normal, vec3 lightDir, vec3 viewPosition, float power) {
+        float diffuseLightDot = positive_dot(normal, lightDir);
+        vec3 reflectionVector = normalize(reflect(-lightDir, normal));
+        float specularLightDot = positive_dot(reflectionVector, -normalize(viewPosition));
+        float specularLightParam = pow(specularLightDot, 10.0 * power);
+        return diffuseLightDot + specularLightParam;
     }
     
     void main(void) {
+        vec3 positionEye3 = vec3(uModelViewMatrix * vPosition);
+        vec3 lightDirection = normalize(uLightDirection - positionEye3);
+        
         float light = 1.0;
         if (uShading == 0) {
             if (uLightModel == 0) {
-                light = lambert(vNormal, uLightDirection - vec3(vPosition), uLightPower);   
+                light = lambert(vNormal, lightDirection, uLightPower);   
             }
             else if (uLightModel == 1) {
-                vec3 uAmbientLightColor = vec3(0.1, 0.1, 0.1);
-                vec3 uDiffuseLightColor = vec3(vColor);
-                vec3 uSpecularLightColor = vec3(1.0, 1.0, 1.0);
-                
-                vec4 vertexPositionEye4 = uModelViewMatrix * vec4(vPosition);
-                vec3 vertexPositionEye3 = vertexPositionEye4.xyz / vertexPositionEye4.w;
-
-                vec3 lightDirection = normalize(uLightDirection - vertexPositionEye3);
-                float diffuseLightDot = max(dot(vNormal, lightDirection), 0.0);
-                vec3 reflectionVector = normalize(reflect(-lightDirection, vNormal));
-                vec3 viewVectorEye = -normalize(vertexPositionEye3);
-                float specularLightDot = max(dot(reflectionVector, viewVectorEye), 0.0);
-                float specularLightParam = pow(specularLightDot, 10.0*uLightPower);
-
-                // vec3 vLightWeighting = uAmbientLightColor + uDiffuseLightColor * diffuseLightDot + uSpecularLightColor * specularLightParam;
-                light = diffuseLightDot + specularLightParam;
+                light = phong(vNormal, lightDirection, positionEye3, uLightPower);
             }
         }
         

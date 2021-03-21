@@ -370,132 +370,131 @@ function main() {
         return;
     }
 
+    const precision = 'precision mediump float;';
+
+    const commonVariables = `
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+        
+        uniform float uLightPower;
+        uniform vec3 uLightDirection;
+        
+        uniform lowp int uDampingFunction;
+        uniform lowp int uShading;
+        uniform lowp int uLightModel;
+        uniform float uLightShininess;
+        
+        varying vec4 vPosition;
+        varying vec4 vColor;
+        varying vec3 vNormal;
+    `;
+
+    const commonFunctions = `
+        float sqr(float coef) {
+            return coef * coef;
+        }
+        
+        float linear(float coef) {
+            return coef;
+        }
+    
+        float positive_dot(vec3 left, vec3 right) {
+            return max(dot(left, right), 0.0);
+        }
+        
+        float lambert(vec3 normal, vec3 lightPosition, float power) {
+            return max(dot(normal, normalize(lightPosition)), 0.0) * power;    
+        }
+        
+        float phong(vec3 normal, vec3 lightDir, vec3 viewPosition, float power, float shininess) {
+            float diffuseLightDot = positive_dot(normal, lightDir);
+            vec3 reflectionVector = normalize(reflect(-lightDir, normal));
+            float specularLightDot = positive_dot(reflectionVector, -normalize(viewPosition));
+            float specularLightParam = pow(specularLightDot, shininess);
+            return diffuseLightDot + specularLightParam * power;
+        }
+        
+        float evaluateLighting(int shading, int current, int lightModel, vec3 normal, 
+                               vec3 lightDir, vec3 viewPosition, float power, float shininess) 
+        {
+            float light = 1.0;
+            if (shading == current) {
+                if (lightModel == 0) {
+                    light = lambert(normal, lightDir, power);   
+                }
+                else if (lightModel == 1) {
+                    light = phong(normal, lightDir, viewPosition, power, shininess);
+                }
+            }
+            return light;
+        }
+        
+        float dampLight(int dampingFunction, float light) {
+            float new_light = light;
+        
+            if (dampingFunction == 0) {
+                new_light = linear(light);   
+            }
+            else if (dampingFunction == 1) {
+                new_light = sqr(light);    
+            }
+            
+            return new_light;
+        }
+    `
+
     const vsSource = `
-    precision mediump float;
+    ${precision}
     
     attribute vec4 aVertexPosition;
     attribute vec4 aVertexColor;
     attribute vec3 aNormal;
     
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
+    ${commonVariables}
     
+    ${commonFunctions}
     
-    uniform float uLightPower;
-    uniform vec3 uLightDirection;
-    
-    uniform lowp int uDampingFunction;
-    uniform lowp int uShading;
-    uniform lowp int uLightModel;
-    
-    varying vec4 vPosition;
-    varying vec4 vColor;
-    varying vec3 vNormal;
-
-    float sqr(float coef) {
-        return coef * coef;
-    }
-    
-    float linear(float coef) {
-        return coef;
-    }
-
-    float lambert(vec3 normal, vec3 lightPosition, float power) {
-        return max(dot(normal, normalize(lightPosition)), 0.0) * power;    
-    }
-
     void main(void) {
-        vNormal = normalize(mat3(uModelViewMatrix) * aNormal);
-    
-        float light = 1.0;
-        if (uShading == 1) {
-            if (uLightModel == 0) {
-                light = lambert(vNormal, uLightDirection - vec3(aVertexPosition), uLightPower);   
-            }
-            else if (uLightModel == 1) {}
-        }
+        vec3 normal = normalize(mat3(uModelViewMatrix) * aNormal);
         
-        if (uDampingFunction == 0) {
-            light = linear(light);   
-        }
-        else {
-            light *= sqr(light);    
-        }
+        vec3 positionEye3 = vec3(uModelViewMatrix * vPosition);
+        vec3 lightDirection = normalize(uLightDirection - positionEye3);
+        
+        int current = 1;
+        
+        float light = evaluateLighting(
+            uShading, current, uLightModel, normal, lightDirection, 
+            positionEye3, uLightPower, uLightShininess);
+        light = dampLight(uDampingFunction, light);
         
         gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
         vColor = aVertexColor;
         vColor.rgb *= light;
         vPosition = aVertexPosition;
+        vNormal = normal;
     }
     `;
 
     const fsSource = `
-    precision mediump float;
+    ${precision}
     
-    uniform float uLightPower;
-    uniform vec3 uLightDirection;
-    uniform vec3 uAmbientLightColor;
-    uniform vec3 uDiffuseLightColor;
-    uniform vec3 uSpecularLightColor;
-    uniform float uLightShininess;
-    uniform vec3 uViewPosition;
-    uniform lowp int uDampingFunction;
+    ${commonVariables}
     
-    uniform lowp int uLightModel; 
-    uniform lowp int uShading;
-    
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
-    
-    varying vec4 vPosition;
-    varying vec4 vColor;
-    varying vec3 vNormal;
-       
-    float sqr(float coef) {
-        return coef * coef;
-    }
-    
-    float linear(float coef) {
-        return coef;
-    }
-   
-    float positive_dot(vec3 left, vec3 right) {
-        return max(dot(left, right), 0.0);
-    }
-   
-    float lambert(vec3 normal, vec3 lightPosition, float power) {
-        return positive_dot(normal, normalize(lightPosition)) * power;    
-    }
-    
-    float phong(vec3 normal, vec3 lightDir, vec3 viewPosition, float power) {
-        float diffuseLightDot = positive_dot(normal, lightDir);
-        vec3 reflectionVector = normalize(reflect(-lightDir, normal));
-        float specularLightDot = positive_dot(reflectionVector, -normalize(viewPosition));
-        float specularLightParam = pow(specularLightDot, 10.0 * power);
-        return diffuseLightDot + specularLightParam;
-    }
+    ${commonFunctions}
     
     void main(void) {
         vec3 positionEye3 = vec3(uModelViewMatrix * vPosition);
         vec3 lightDirection = normalize(uLightDirection - positionEye3);
         
-        float light = 1.0;
-        if (uShading == 0) {
-            if (uLightModel == 0) {
-                light = lambert(vNormal, lightDirection, uLightPower);   
-            }
-            else if (uLightModel == 1) {
-                light = phong(vNormal, lightDirection, positionEye3, uLightPower);
-            }
-        }
+        int current = 0;
+        
+        float light = evaluateLighting(
+            uShading, current, uLightModel, vNormal, lightDirection, 
+            positionEye3, uLightPower, uLightShininess);
+        light = dampLight(uDampingFunction, light);
         
         gl_FragColor = vColor;
-        if (uDampingFunction == 0) {
-            gl_FragColor.rgb *= linear(light);   
-        }
-        else {
-            gl_FragColor.rgb *= sqr(light);    
-        }
+        gl_FragColor.rgb *= light;
     }
     `;
 

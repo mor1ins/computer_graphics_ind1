@@ -340,9 +340,9 @@ class Scene {
         };
 
         this.objects = [
-            new Cube(this.gl, 2, [1, 0.84, 0], [0, -5, -20]), //gold
-            new Cube(this.gl, 0.8, [1, 0.84, 0], [0, 1.5, -7]), // gold
-            new Cube(this.gl, 1.2, [0.75, 0.75, 0.75], [-4, -0.5, -11]), //silver
+            new Cube(this.gl, 1, [1, 0.84, 0], [0, -5, -20]), //gold
+            new Cube(this.gl, 1, [1, 0.84, 0], [0, 1.5, -7]), // gold
+            new Cube(this.gl, 1, [0.75, 0.75, 0.75], [-4, -0.5, -11]), //silver
             new Sphere(this.gl, 5, [0.8, 0.5, 0.2], [3, -0.5, -9]), // bronze
         ];
 

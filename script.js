@@ -411,7 +411,14 @@ function main() {
             vec3 reflectionVector = normalize(reflect(-lightDir, normal));
             float specularLightDot = positive_dot(reflectionVector, -normalize(viewPosition));
             float specularLightParam = pow(specularLightDot, shininess);
-            return diffuseLightDot + specularLightParam * power;
+            return (diffuseLightDot + specularLightParam) * power;
+        }
+        
+        float blinn(vec3 normal, vec4 vertex, vec3 lightDir, vec3 viewPosition, float power, float shininess) {
+            float lambertComponent = positive_dot(normal, lightDir);
+            vec3 halfwayVector = normalize(lightDir + viewPosition);
+            float specular = pow(positive_dot(halfwayVector, normal), shininess);
+            return (lambertComponent + specular) * power;
         }
         
         float celShaded(vec3 normal, vec3 lightPosition, float power) {
@@ -430,7 +437,7 @@ function main() {
             return light;
         }
         
-        float evaluateLighting(int shading, int current, int lightModel, vec3 normal, 
+        float evaluateLighting(int shading, int current, int lightModel, vec3 normal, vec4 vertex,
                                vec3 lightDir, vec3 viewPosition, float power, float shininess) 
         {
             float light = 1.0;
@@ -443,6 +450,9 @@ function main() {
                 }
                 else if (lightModel == 2) {
                     light = celShaded(normal, lightDir, power);   
+                }
+                else if (lightModel == 3) {
+                    light = blinn(normal, vertex, lightDir, viewPosition, power, shininess);
                 }
             }
             return light;
@@ -481,8 +491,8 @@ function main() {
         int current = 1;
         
         float light = evaluateLighting(
-            uShading, current, uLightModel, normal, lightDirection, 
-            positionEye3, uLightPower, uLightShininess);
+            uShading, current, uLightModel, normal, aVertexPosition, 
+            lightDirection, positionEye3, uLightPower, uLightShininess);
         light = dampLight(uDampingFunction, light);
         
         gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
@@ -507,8 +517,8 @@ function main() {
         int current = 0;
         
         float light = evaluateLighting(
-            uShading, current, uLightModel, vNormal, lightDirection, 
-            positionEye3, uLightPower, uLightShininess);
+            uShading, current, uLightModel, vNormal, vPosition, 
+            lightDirection, positionEye3, uLightPower, uLightShininess);
         light = dampLight(uDampingFunction, light);
         
         gl_FragColor = vColor;

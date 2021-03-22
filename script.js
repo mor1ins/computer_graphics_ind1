@@ -41,101 +41,20 @@ function updateState() {
 // });
 
 
-class Cube {
-    constructor(webgl_context, size, color, default_position=[0.0, 0.0, 0.0]) {
+class Drawable {
+    constructor(webgl_context) {
         this.gl = webgl_context;
 
-        this.positions = ([
-            // Front face
-            -1.0, -1.0,  1.0,
-            1.0, -1.0,  1.0,
-            1.0,  1.0,  1.0,
-            -1.0,  1.0,  1.0,
+        this.position = NaN;
 
-            // Back face
-            -1.0, -1.0, -1.0,
-            -1.0,  1.0, -1.0,
-            1.0,  1.0, -1.0,
-            1.0, -1.0, -1.0,
-
-            // Top face
-            -1.0,  1.0, -1.0,
-            -1.0,  1.0,  1.0,
-            1.0,  1.0,  1.0,
-            1.0,  1.0, -1.0,
-
-            // Bottom face
-            -1.0, -1.0, -1.0,
-            1.0, -1.0, -1.0,
-            1.0, -1.0,  1.0,
-            -1.0, -1.0,  1.0,
-
-            // Right face
-            1.0, -1.0, -1.0,
-            1.0,  1.0, -1.0,
-            1.0,  1.0,  1.0,
-            1.0, -1.0,  1.0,
-
-            // Left face
-            -1.0, -1.0, -1.0,
-            -1.0, -1.0,  1.0,
-            -1.0,  1.0,  1.0,
-            -1.0,  1.0, -1.0,
-        ]).map((point, i) => point * size);
-
-        this.position = default_position;
-
-        this.positionBuffer = this.gl.createBuffer();
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.positions), this.gl.STATIC_DRAW);
-
-        this.faceColors = [
-            [...color,  1.0],    // Front face: white
-            [...color,  1.0],    // Back face: red
-            [...color,  1.0],    // Top face: green
-            [...color,  1.0],    // Bottom face: blue
-            [...color,  1.0],    // Right face: yellow
-            [...color,  1.0],    // Left face: purple
-        ];
-
-        this.colors = [].concat.apply([], this.faceColors.map(color => [...color, ...color, ...color, ...color]));
-
-        this.colorBuffer = this.gl.createBuffer();
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.colors), this.gl.STATIC_DRAW);
-
-
-        this.triangles = [
-            0,  1,  2,      0,  2,  3,    // front
-            4,  5,  6,      4,  6,  7,    // back
-            8,  9,  10,     8,  10, 11,   // top
-            12, 13, 14,     12, 14, 15,   // bottom
-            16, 17, 18,     16, 18, 19,   // right
-            20, 21, 22,     20, 22, 23,   // left
-        ];
-
-        this.triangleBuffer = this.gl.createBuffer();
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.triangleBuffer);
-        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER,
-            new Uint16Array(this.triangles), this.gl.STATIC_DRAW);
-
-
-        this.normals = [
-            [0, 0, 1],    // front
-            [0, 0, -1],   // back
-            [0, 1, 0],    //
-            [0, -1, 0],
-            [1, 0, 0],
-            [-1, 0, 0],
-        ];
-
-
-        // this.normals = [].concat.apply([], this.normals.map(n => [...n, ...n, ...n, ...n, ...n, ...n]));
-        this.normals = [].concat.apply([], this.normals.map(n => [...n, ...n, ...n, ...n]));
-
-        this.normalBuffer = this.gl.createBuffer();
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.normalBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.normals), this.gl.STATIC_DRAW);
+        this.positionBuffer = NaN;
+        this.colorBuffer = NaN;
+        this.triangleBuffer = NaN;
+        this.normalBuffer = NaN;
+        this.positions = NaN;
+        this.colors = NaN;
+        this.triangles = NaN;
+        this.normals = NaN;
     }
 
     getBuffers() {
@@ -146,7 +65,7 @@ class Cube {
             normal: this.normalBuffer,
 
             raw_position: this.positions,
-            raw_color: this.faceColors,
+            raw_color: this.colors,
             raw_indices: this.triangles,
             raw_normals: this.normals,
         };
@@ -218,6 +137,174 @@ class Cube {
 }
 
 
+class Sphere extends Drawable {
+    constructor(webgl_context, size, color, default_position=[0.0, 0.0, 0.0]) {
+        super(webgl_context);
+        this.position = default_position;
+
+        const SPHERE_DIV = 18;
+        let i, ai, si, ci;
+        let j, aj, sj, cj;
+        let p1, p2;
+        this.positions = [];
+        for (j = 0; j <= SPHERE_DIV; j++)
+        {
+            aj = j * Math.PI / SPHERE_DIV;
+            sj = Math.sin(aj);
+            cj = Math.cos(aj);
+            for (i = 0; i <= SPHERE_DIV; i++)
+            {
+                ai = i * 2 * Math.PI / SPHERE_DIV;
+                si = Math.sin(ai);
+                ci = Math.cos(ai);
+                this.positions.push(si * sj);  // X
+                this.positions.push(cj);       // Y
+                this.positions.push(ci * sj);  // Z
+            }
+        }
+        this.positions.map(v => v * size);
+
+        this.triangles = [];
+        for (j = 0; j < SPHERE_DIV; j++)
+        {
+            for (i = 0; i < SPHERE_DIV; i++)
+            {
+                p1 = j * (SPHERE_DIV+1) + i;
+                p2 = p1 + (SPHERE_DIV+1);
+                this.triangles.push(p1);
+                this.triangles.push(p2);
+                this.triangles.push(p1 + 1);
+                this.triangles.push(p1 + 1);
+                this.triangles.push(p2);
+                this.triangles.push(p2 + 1);
+            }
+        }
+
+        color = [...color, 1.0];
+        this.colors = [...Array(this.positions.length * color.length).keys()]
+            .map(i => color[i % color.length]);
+
+
+        let center = [0, 0, 0];
+        this.normals = this.positions.map((v, i) => v - center[i % center.length]);
+
+
+        this.positionBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.positions), this.gl.STATIC_DRAW);
+
+        this.triangleBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.triangleBuffer);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this.triangles), this.gl.STATIC_DRAW);
+
+        this.colorBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.colors), this.gl.STATIC_DRAW);
+
+        this.normalBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.normalBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.normals), this.gl.STATIC_DRAW);
+    }
+}
+
+
+class Cube extends Drawable {
+    constructor(webgl_context, size, color, default_position=[0.0, 0.0, 0.0]) {
+        super(webgl_context);
+
+        this.positions = ([
+            // Front face
+            -1.0, -1.0,  1.0,
+            1.0, -1.0,  1.0,
+            1.0,  1.0,  1.0,
+            -1.0,  1.0,  1.0,
+
+            // Back face
+            -1.0, -1.0, -1.0,
+            -1.0,  1.0, -1.0,
+            1.0,  1.0, -1.0,
+            1.0, -1.0, -1.0,
+
+            // Top face
+            -1.0,  1.0, -1.0,
+            -1.0,  1.0,  1.0,
+            1.0,  1.0,  1.0,
+            1.0,  1.0, -1.0,
+
+            // Bottom face
+            -1.0, -1.0, -1.0,
+            1.0, -1.0, -1.0,
+            1.0, -1.0,  1.0,
+            -1.0, -1.0,  1.0,
+
+            // Right face
+            1.0, -1.0, -1.0,
+            1.0,  1.0, -1.0,
+            1.0,  1.0,  1.0,
+            1.0, -1.0,  1.0,
+
+            // Left face
+            -1.0, -1.0, -1.0,
+            -1.0, -1.0,  1.0,
+            -1.0,  1.0,  1.0,
+            -1.0,  1.0, -1.0,
+        ]).map((point, i) => point * size);
+
+        this.position = default_position;
+
+        this.positionBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.positions), this.gl.STATIC_DRAW);
+
+        const faceColors = [
+            [...color,  1.0],    // Front face: white
+            [...color,  1.0],    // Back face: red
+            [...color,  1.0],    // Top face: green
+            [...color,  1.0],    // Bottom face: blue
+            [...color,  1.0],    // Right face: yellow
+            [...color,  1.0],    // Left face: purple
+        ];
+
+        this.colors = [].concat.apply([], faceColors.map(color => [...color, ...color, ...color, ...color]));
+
+        this.colorBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.colors), this.gl.STATIC_DRAW);
+
+
+        this.triangles = [
+            0,  1,  2,      0,  2,  3,    // front
+            4,  5,  6,      4,  6,  7,    // back
+            8,  9,  10,     8,  10, 11,   // top
+            12, 13, 14,     12, 14, 15,   // bottom
+            16, 17, 18,     16, 18, 19,   // right
+            20, 21, 22,     20, 22, 23,   // left
+        ];
+
+        this.triangleBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.triangleBuffer);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER,
+            new Uint16Array(this.triangles), this.gl.STATIC_DRAW);
+
+
+        this.normals = [
+            [0, 0, 1],    // front
+            [0, 0, -1],   // back
+            [0, 1, 0],    //
+            [0, -1, 0],
+            [1, 0, 0],
+            [-1, 0, 0],
+        ];
+
+        this.normals = [].concat.apply([], this.normals.map(n => [...n, ...n, ...n, ...n]));
+
+        this.normalBuffer = this.gl.createBuffer();
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.normalBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.normals), this.gl.STATIC_DRAW);
+    }
+}
+
+
 class Scene {
     constructor(webgl_context, vertex_shader, fragment_shader, store) {
         this.gl = webgl_context;
@@ -253,10 +340,10 @@ class Scene {
         };
 
         this.objects = [
-            new Cube(this.gl, 2, [1, 0.84, 0], [0, -3.5, -20]), //gold
-            new Cube(this.gl, 0.8, [1, 0.84, 0], [0, 1, -7]), // gold
+            new Cube(this.gl, 2, [1, 0.84, 0], [0, -5, -20]), //gold
+            new Cube(this.gl, 0.8, [1, 0.84, 0], [0, 1.5, -7]), // gold
             new Cube(this.gl, 1.2, [0.75, 0.75, 0.75], [-4, -0.5, -11]), //silver
-            new Cube(this.gl, 1.2, [0.8, 0.5, 0.2], [4, -0.5, -11]), // bronze
+            new Sphere(this.gl, 3, [0.8, 0.5, 0.2], [3, -0.5, -9]), // bronze
         ];
 
         this.then = 0;
@@ -302,12 +389,12 @@ class Scene {
             obj.to_position(modelViewMatrix);
 
             let rotations = [
-                [1, 0, 0],
-                [1, 1, 1],
-                [0, 1, 0],
+                [-1, 0, 0],
+                [1, 2, 3],
+                [0, -1, 0],
                 [0, 0, 1],
             ];
-            process(obj, modelViewMatrix, this.cubeRotation / (i + 1), rotations[i % this.objects.length]);
+            process(obj, modelViewMatrix, this.cubeRotation / (i + 2), rotations[i % this.objects.length]);
 
             obj.setVertexPositions(this.programInfo);
             obj.setVertexColors(this.programInfo);
@@ -330,8 +417,10 @@ class Scene {
             this.gl.uniform1i(this.programInfo.uniformLocations.shading, this.state.shading);
 
             this.gl.drawElements(this.gl.TRIANGLES, buffers.raw_indices.length, this.gl.UNSIGNED_SHORT, 0);
+
+            // console.log(Math.max(...buffers.raw_indices));
         });
-        this.cubeRotation += deltaTime;
+        this.cubeRotation += deltaTime * 2;
     }
 
     initShaderProgram() {
@@ -422,7 +511,7 @@ function main() {
         
         float blinn(vec3 normal, vec4 vertex, vec3 lightDir, vec3 viewPosition, float power, float shininess) {
             float lambertComponent = positive_dot(normal, lightDir);
-            vec3 halfwayVector = normalize(lightDir + viewPosition);
+            vec3 halfwayVector = normalize(lightDir - viewPosition);
             float specular = pow(positive_dot(halfwayVector, normal), shininess);
             return (lambertComponent + specular) * power;
         }
@@ -433,11 +522,11 @@ function main() {
             if (light > 0.95) {
                 light = 1.0;
             } else if (light > 0.5) {
-                light = 0.7;
+                light = 0.8;
             } else if (light > 0.2) {
-                light = 0.2;
+                light = 0.3;
             } else {
-                light = 0.05;
+                light = 0.2;
             }
 
             return light;
@@ -491,7 +580,7 @@ function main() {
     
     void main(void) {
         vec3 normal = normalize(mat3(uModelViewMatrix) * aNormal);
-        vec3 positionEye3 = vec3(uModelViewMatrix * vPosition);
+        vec3 positionEye3 = vec3(uModelViewMatrix * aVertexPosition);
         vec3 lightDirection = normalize(uLightDirection - positionEye3);
         
         int current = 1;

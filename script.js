@@ -253,10 +253,10 @@ class Scene {
         };
 
         this.objects = [
-            new Cube(this.gl, 1, [1, 0.84, 0], [0, -2.5, -10]), //gold
-            new Cube(this.gl, 1, [1, 0.84, 0], [0, -0.5, -10]), // gold
-            new Cube(this.gl, 1, [0.75, 0.75, 0.75], [-3, -2.5, -10]), //silver
-            new Cube(this.gl, 1, [0.8, 0.5, 0.2], [3, -2.5, -10]), // bronze
+            new Cube(this.gl, 2, [1, 0.84, 0], [0, -3.5, -20]), //gold
+            new Cube(this.gl, 0.8, [1, 0.84, 0], [0, 1, -7]), // gold
+            new Cube(this.gl, 1.2, [0.75, 0.75, 0.75], [-4, -0.5, -11]), //silver
+            new Cube(this.gl, 1.2, [0.8, 0.5, 0.2], [4, -0.5, -11]), // bronze
         ];
 
         this.then = 0;
@@ -297,11 +297,17 @@ class Scene {
         mat4.perspective(projectionMatrix, this.fieldOfView, this.aspect, this.zNear, this.zFar);
 
 
-        this.objects.forEach(obj => {
+        this.objects.forEach((obj, i) => {
             const modelViewMatrix = mat4.create();
             obj.to_position(modelViewMatrix);
 
-            process(obj, modelViewMatrix, this.cubeRotation, [0, 1, 0]);
+            let rotations = [
+                [1, 0, 0],
+                [1, 1, 1],
+                [0, 1, 0],
+                [0, 0, 1],
+            ];
+            process(obj, modelViewMatrix, this.cubeRotation / (i + 1), rotations[i % this.objects.length]);
 
             obj.setVertexPositions(this.programInfo);
             obj.setVertexColors(this.programInfo);
@@ -325,7 +331,7 @@ class Scene {
 
             this.gl.drawElements(this.gl.TRIANGLES, buffers.raw_indices.length, this.gl.UNSIGNED_SHORT, 0);
         });
-        this.cubeRotation += deltaTime / 5;
+        this.cubeRotation += deltaTime;
     }
 
     initShaderProgram() {

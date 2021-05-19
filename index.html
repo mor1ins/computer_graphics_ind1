@@ -1,27 +1,26 @@
-<!doctype html>
-<html class="no-js" lang="">
+<link rel="stylesheet" href="style.css">
 
-<head>
-    <meta charset="utf-8">
-    <title></title>
-    <meta content="" name="description">
-    <meta content="width=device-width, initial-scale=1" name="viewport">
+<canvas id="c"></canvas>
 
-    <meta content="" property="og:title">
-    <meta content="" property="og:type">
-    <meta content="" property="og:url">
-    <meta content="" property="og:image">
-    <meta content="#fafafa" name="theme-color">
-</head>
+<script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 vertexPosition;
 
-<body>
+    uniform mat4 modelViewMatrix;
+    uniform mat4 perspectiveMatrix;
 
-    <canvas height="640" id="canvas" style="border: 1px solid black;" width="980"></canvas>
-    <script src="js/lib.js"></script>
-    <script src="js/glLib.js"></script>
-    <script src="js/spark.js"></script>
-    <script src="js/shaders.js"></script>
-    <script src="js/main.js"></script>
-</body>
+    void main(void) {
+        gl_Position = perspectiveMatrix * modelViewMatrix * vec4(vertexPosition, 1.0);
+    }
+</script>
 
-</html>
+
+<script id="shader-fs" type="x-shader/x-fragment">
+    precision highp float;
+
+    void main(void) {
+        gl_FragColor = vec4(0.2, 0.3, 0.4, 1.0);
+    }
+</script>
+
+
+<script src="./js/main.js"></script>

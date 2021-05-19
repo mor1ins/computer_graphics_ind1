@@ -39,6 +39,16 @@
             <input onchange="updateState()" type="range" min="0" max="2" step="0.05" class="form-range" id="lightPower">
             <br/><br/>
 
+            <label for="textureCoef" class="form-label">Коэффициенты смешивания (цвет, текстура, материал)</label>
+            <input onchange="updateState()" type="range" min="0" max="1" step="0.01" class="form-range" id="colorCoef">
+            <br/><br/>
+
+            <input onchange="updateState()" type="range" min="0" max="1" step="0.01" class="form-range" id="textureCoef">
+            <br/><br/>
+
+            <input onchange="updateState()" type="range" min="0" max="1" step="0.01" class="form-range" id="materialCoef">
+            <br/><br/>
+
             <label for="lightPower" class="form-label">Функция затухания</label> <br/>
             <select class="dampingFunction" onchange="updateState()" aria-label="Функция затухания">
                 <option selected value="0">Линейная</option>

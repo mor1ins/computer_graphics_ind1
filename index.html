@@ -1,6 +1,12 @@
 <link rel="stylesheet" href="style.css">
 
-<canvas id="c"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix-min.js"
+        integrity="sha512-zhHQR0/H5SEBL3Wn6yYSaTTZej12z0hVZKOv3TwCUXT1z5qeqGcXJLLrbERYRScEDDpYIJhPC1fk31gqR783iQ=="
+        crossorigin="anonymous" defer>
+</script>
+<script src="https://webglfundamentals.org/webgl/resources/m4.js"></script>
+
+<canvas id="webgl-canvas"></canvas>
 
 <script id="shader-vs" type="x-shader/x-vertex">
     attribute vec3 vertexPosition;
@@ -10,6 +16,7 @@
 
     void main(void) {
         gl_Position = perspectiveMatrix * modelViewMatrix * vec4(vertexPosition, 1.0);
+        // gl_PointSize = 4.0;
     }
 </script>
 
@@ -17,8 +24,11 @@
 <script id="shader-fs" type="x-shader/x-fragment">
     precision highp float;
 
+    uniform vec4 uColor;
+
     void main(void) {
-        gl_FragColor = vec4(0.2, 0.3, 0.4, 1.0);
+        // gl_FragColor = vec4(0.2, 0.3, 0.4, 1.0);
+        gl_FragColor = uColor;
     }
 </script>
 
